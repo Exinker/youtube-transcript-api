@@ -1,0 +1,3 @@
+
+class InnerTubeClientError(Exception):
+    pass
