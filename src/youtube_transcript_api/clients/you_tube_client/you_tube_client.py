@@ -1,5 +1,5 @@
+import logging
 import re
-from typing import NewType
 
 import aiohttp
 
@@ -9,7 +9,8 @@ from youtube_transcript_api.clients.you_tube_client.exceptions import (
     YouTubeClientError,
 )
 
-Second = NewType('Second', float)
+
+LOGGER = logging.getLogger('youtube-transcript-api')
 
 
 class YouTubeClient:

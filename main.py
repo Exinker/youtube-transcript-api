@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 from collections.abc import Sequence
 from pathlib import Path
 
@@ -11,10 +12,13 @@ from youtube_transcript_api.clients import (
     YouTubeClient,
     YouTubeClientError,
 )
+from youtube_transcript_api.configs import LOGGING_CONFIG
 from youtube_transcript_api.transcript import Transcript
 
 CAHCE_DIR = Path.cwd() / '.cache'
 CAHCE_DIR.mkdir(parents=True, exist_ok=True)
+
+LOGGER = logging.getLogger('youtube-transcript-api')
 
 
 async def main(
@@ -34,21 +38,49 @@ async def main(
                 video_id=video_id,
             )
         except YouTubeClientError as error:
+            LOGGER.error(
+                'Fetching api-key is failed',
+                extra=dict(
+                    video_id=video_id,
+                    error=str(error),
+                )
+            )
             raise
+        else:
+            LOGGER.info(
+                'Youtube api-key is fetched successfully',
+                extra=dict(
+                    video_id=video_id,
+                ),
+            )
 
         try:
             inner_tube_client = InnerTubeClient(
                 session=session,
                 api_key=api_key,
             )
-            caption_tracks = await inner_tube_client.extract_caption_tracks(
+            caption_tracks = await inner_tube_client.fetch_caption_tracks(
                 video_id=video_id,
             )
         except InnerTubeClientError as error:
+            LOGGER.error(
+                'Fetching caption tracks is failed',
+                extra=dict(
+                    video_id=video_id,
+                    error=str(error),
+                ),
+            )
             raise
         else:
-            with open(filedir / 'caption_tracks.json', 'w') as file:
-                json.dump(caption_tracks, file, indent=2)
+            LOGGER.info(
+                'Caption tracks are fetched successfully',
+                extra=dict(
+                    video_id=video_id,
+                )
+            )
+            if LOGGER.isEnabledFor(logging.DEBUG):
+                with open(filedir / 'caption_tracks.json', 'w') as file:
+                    json.dump(caption_tracks, file, indent=2)
 
         try:
             transcripts = await asyncio.gather(*[
@@ -62,11 +94,18 @@ async def main(
         except Exception as error:
             raise
         else:
-            with open(filedir / 'transcripts.json', 'w') as file:
-                json.dump([
-                    transcript.model_dump()
-                    for transcript in transcripts
-                ], file, indent=2, ensure_ascii=False)
+            LOGGER.info(
+                'Transcripts are fetched successfully',
+                extra=dict(
+                    video_id=video_id,
+                ),
+            )
+            if LOGGER.isEnabledFor(logging.DEBUG):
+                with open(filedir / 'transcripts.json', 'w') as file:
+                    json.dump([
+                        transcript.model_dump()
+                        for transcript in transcripts
+                    ], file, indent=2, ensure_ascii=False)
 
         return transcripts
 
@@ -75,4 +114,3 @@ if __name__ == '__main__':
     transcripts = asyncio.run(main(
         video_id='eVcx6qZfU-M',
     ))
-    print(transcripts)

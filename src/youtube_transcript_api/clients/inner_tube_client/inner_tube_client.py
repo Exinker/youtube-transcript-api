@@ -1,9 +1,13 @@
+import logging
 from collections.abc import Mapping, Sequence
-from typing import Any, NewType
+from typing import Any
 
 import aiohttp
 
-Second = NewType('Second', float)
+from youtube_transcript_api.clients.inner_tube_client.exceptions import InnerTubeClientError
+
+
+LOGGER = logging.getLogger('youtube-transcript-api')
 
 
 class InnerTubeClient:
@@ -26,18 +30,34 @@ class InnerTubeClient:
             api_key=self.api_key,
         )
 
-    async def extract_caption_tracks(
+    async def fetch_caption_tracks(
         self,
         video_id: str,
     ) -> Sequence[Mapping[str, Any]]:
 
-        data = await self._fetch_data(
-            video_id=video_id,
-        )
+        try:
+            data = await self._fetch_data(
+                video_id=video_id,
+            )
+        except Exception as error:
+            LOGGER.error(
+                'Fetching innertube data is failed',
+                extra=dict(
+                    video_id=video_id,
+                    error=str(error),
+                ),
+            )
+            raise
 
         caption_tracks = data.get('captions', {}).get('playerCaptionsTracklistRenderer', {}).get('captionTracks')
         if caption_tracks is None:
-            raise ValueError
+            LOGGER.error(
+                'Caption track list is empty',
+                extra=dict(
+                    video_id=video_id,
+                ),
+            )
+            raise InnerTubeClientError
 
         return caption_tracks
 

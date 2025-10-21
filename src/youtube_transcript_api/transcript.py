@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from collections.abc import Mapping, Sequence
 from typing import Any, NewType, Self
 import xml.etree.ElementTree as ET
@@ -7,6 +8,9 @@ import aiohttp
 from pydantic import BaseModel
 
 Second = NewType('Second', float)
+
+
+LOGGER = logging.getLogger('youtube-transcript-api')
 
 
 class Snippet(BaseModel):
