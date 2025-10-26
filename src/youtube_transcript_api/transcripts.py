@@ -1,13 +1,11 @@
 import asyncio
 import logging
 from collections.abc import Mapping, Sequence
-from typing import Any, NewType, Self
+from typing import Any, Self
 import xml.etree.ElementTree as ET
 
 import aiohttp
 from pydantic import BaseModel
-
-Second = NewType('Second', float)
 
 
 LOGGER = logging.getLogger('youtube-transcript-api')
@@ -15,7 +13,7 @@ LOGGER = logging.getLogger('youtube-transcript-api')
 
 class Snippet(BaseModel):
 
-    start: Second
+    created_at: float
     text: str
 
 
@@ -72,7 +70,7 @@ class Transcript(BaseModel):
         snippets = []
         for item in root.findall('text'):
             snippet = Snippet(
-                start=item.get('start'),
+                created_at=item.get('start'),
                 text=item.text,
             )
             snippets.append(snippet)

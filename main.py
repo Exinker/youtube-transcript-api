@@ -12,8 +12,7 @@ from youtube_transcript_api.clients import (
     YouTubeClient,
     YouTubeClientError,
 )
-from youtube_transcript_api.configs import LOGGING_CONFIG
-from youtube_transcript_api.transcript import Transcript
+from youtube_transcript_api.transcripts import Transcript
 
 CAHCE_DIR = Path.cwd() / '.cache'
 CAHCE_DIR.mkdir(parents=True, exist_ok=True)
@@ -111,6 +110,21 @@ async def main(
 
 
 if __name__ == '__main__':
+    video_id = 'eVcx6qZfU-M'
     transcripts = asyncio.run(main(
-        video_id='eVcx6qZfU-M',
+        video_id=video_id,
     ))
+
+    filedir = CAHCE_DIR / video_id / 'texts'
+    filedir.mkdir(parents=True, exist_ok=True)
+    for i, transcript in enumerate(transcripts, start=1):
+        text = '\n'.join([
+            '{created_at} - {text}'.format(
+                created_at=snippet.created_at,
+                text=snippet.text,
+            )
+            for snippet in transcript.snippets
+        ])
+
+        with open(filedir / f'{i}.txt', 'w') as file:
+            file.write(text)
