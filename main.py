@@ -20,12 +20,9 @@ CAHCE_DIR.mkdir(parents=True, exist_ok=True)
 LOGGER = logging.getLogger('youtube-transcript-api')
 
 
-async def main(
+async def fetch_transcipt(
     video_id: str,
-) -> Sequence[Transcript]:
-
-    filedir = CAHCE_DIR / video_id
-    filedir.mkdir(parents=True, exist_ok=True)
+) -> Transcript:
 
     async with aiohttp.ClientSession() as session:
 
@@ -38,7 +35,7 @@ async def main(
             )
         except YouTubeClientError as error:
             LOGGER.error(
-                'Fetching api-key is failed',
+                'Fetching YouTube api key failed',
                 extra=dict(
                     video_id=video_id,
                     error=str(error),
@@ -47,7 +44,7 @@ async def main(
             raise
         else:
             LOGGER.info(
-                'Youtube api-key is fetched successfully',
+                'YouTube api key fetched successfully',
                 extra=dict(
                     video_id=video_id,
                 ),
@@ -63,7 +60,7 @@ async def main(
             )
         except InnerTubeClientError as error:
             LOGGER.error(
-                'Fetching caption tracks is failed',
+                'Fetching caption tracks failed',
                 extra=dict(
                     video_id=video_id,
                     error=str(error),
@@ -72,59 +69,79 @@ async def main(
             raise
         else:
             LOGGER.info(
-                'Caption tracks are fetched successfully',
+                'Caption tracks fetched successfully',
                 extra=dict(
                     video_id=video_id,
                 )
             )
             if LOGGER.isEnabledFor(logging.DEBUG):
+                filedir = CAHCE_DIR / video_id
+                filedir.mkdir(parents=True, exist_ok=True)
+
                 with open(filedir / 'caption_tracks.json', 'w') as file:
                     json.dump(caption_tracks, file, indent=2)
 
         try:
-            transcripts = await asyncio.gather(*[
-                Transcript.create(
-                    session=session,
+            transcript = await Transcript.create(
+                session=session,
+                video_id=video_id,
+                caption_track=caption_tracks[0],
+            )
+        except YouTubeClientError as error:
+            LOGGER.error(
+                'Fetching transcript failed',
+                extra=dict(
                     video_id=video_id,
-                    caption_track=caption_track,
-                )
-                for caption_track in caption_tracks
-            ])
+                    error=str(error),
+                ),
+            )
+            raise
         except Exception as error:
+            LOGGER.error(
+                'Unknown error',
+                extra=dict(
+                    video_id=video_id,
+                    error=str(error),
+                ),
+            )
             raise
         else:
             LOGGER.info(
-                'Transcripts are fetched successfully',
+                'Transcript fetched successfully',
                 extra=dict(
                     video_id=video_id,
                 ),
             )
-            if LOGGER.isEnabledFor(logging.DEBUG):
-                with open(filedir / 'transcripts.json', 'w') as file:
-                    json.dump([
-                        transcript.model_dump()
-                        for transcript in transcripts
-                    ], file, indent=2, ensure_ascii=False)
 
-        return transcripts
+        return transcript
+
+
+async def main() -> None:
+
+    with open('data.json', 'r') as file:
+        data = json.load(file)
+
+    for datum in data:
+        video_id = datum['video_id']
+
+        transcript = await fetch_transcipt(
+            video_id=video_id,
+        )
+
+        filedir = CAHCE_DIR / video_id / 'transcript'
+        filedir.mkdir(parents=True, exist_ok=True)
+        with open(filedir / 'result.json', 'w') as file:
+            json.dump(transcript.model_dump(), file, indent=2, ensure_ascii=False)
+        with open(filedir / 'result.txt', 'w') as file:
+            text = '\n'.join([
+                '{created_at} - {text}'.format(
+                    created_at=snippet.created_at,
+                    text=snippet.text,
+                )
+                for snippet in transcript.snippets
+            ])
+            file.write(text)
 
 
 if __name__ == '__main__':
-    video_id = 'eVcx6qZfU-M'
-    transcripts = asyncio.run(main(
-        video_id=video_id,
-    ))
-
-    filedir = CAHCE_DIR / video_id / 'texts'
-    filedir.mkdir(parents=True, exist_ok=True)
-    for i, transcript in enumerate(transcripts, start=1):
-        text = '\n'.join([
-            '{created_at} - {text}'.format(
-                created_at=snippet.created_at,
-                text=snippet.text,
-            )
-            for snippet in transcript.snippets
-        ])
-
-        with open(filedir / f'{i}.txt', 'w') as file:
-            file.write(text)
+    asyncio.run(main())

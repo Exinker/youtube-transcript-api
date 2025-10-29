@@ -7,6 +7,8 @@ import xml.etree.ElementTree as ET
 import aiohttp
 from pydantic import BaseModel
 
+from youtube_transcript_api.clients.you_tube_client import YouTubeBlockError
+
 
 LOGGER = logging.getLogger('youtube-transcript-api')
 
@@ -39,7 +41,16 @@ class Transcript(BaseModel):
 
         async with session.get(
             url=url,
-        ) as response:
+        ) as response:            
+            if response.status == 429:
+                LOGGER.error(
+                    'Request was blocked by YouTube',
+                    extra=dict(
+                        video_id=video_id,
+                    ),
+                )
+                raise YouTubeBlockError('Automated queries was detected')
+            
             html = await response.text()
 
         snippets = await asyncio.to_thread(

@@ -3,8 +3,8 @@ from .inner_tube_client import (
     InnerTubeClientError,
 )
 from .you_tube_client import (
-    YouTubeBlockError,
     YouTubeClient,
+    YouTubeBlockError,
     YouTubeClientError,
     YouTubeRequestError,
     YouTubeClientError,
@@ -13,8 +13,8 @@ from .you_tube_client import (
 __all__ = [
     InnerTubeClient,
     InnerTubeClientError,
-    YouTubeBlockError,
     YouTubeClient,
+    YouTubeBlockError,
     YouTubeClientError,
     YouTubeRequestError,
     YouTubeClientError,
